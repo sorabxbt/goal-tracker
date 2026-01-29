@@ -1,62 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Goal Tracker</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      background:#0b0b0b;
-      color:#fff;
-      font-family:Arial;
-      margin:0;
-      padding:20px;
-    }
-    .box {
-      max-width:600px;
-      margin:auto;
-      background:#141414;
-      padding:20px;
-      border-radius:10px;
-    }
-    input, button {
-      width:100%;
-      padding:10px;
-      margin:6px 0;
-      border-radius:6px;
-      border:none;
-    }
-    button {
-      background:#22c55e;
-      font-weight:bold;
-      cursor:pointer;
-    }
-    .goal {
-      display:flex;
-      justify-content:space-between;
-      background:#1f1f1f;
-      padding:10px;
-      margin-top:8px;
-      border-radius:6px;
-    }
-    .logout {
-      background:#ef4444;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Goal Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<style>
+body {
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  margin:0;
+  padding:20px;
+}
+.box {
+  max-width:500px;
+  margin:auto;
+  background:#141414;
+  padding:20px;
+  border-radius:10px;
+}
+input, button {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border-radius:6px;
+  border:none;
+}
+button {
+  background:#22c55e;
+  font-weight:bold;
+  cursor:pointer;
+}
+.goal {
+  display:flex;
+  justify-content:space-between;
+  background:#1f1f1f;
+  padding:10px;
+  margin-top:8px;
+  border-radius:6px;
+}
+.logout {
+  background:#ef4444;
+}
+</style>
 </head>
 
 <body>
 
+<!-- LOGIN / SIGNUP -->
 <div class="box" id="authBox">
   <h2>Login / Signup</h2>
   <input id="username" placeholder="Username" />
   <input id="password" type="password" placeholder="Password" />
-  <button onclick="login()">Login / Signup</button>
+  <button onclick="login()">Continue</button>
 </div>
 
+<!-- APP -->
 <div class="box" id="appBox" style="display:none">
   <h2>Goal Tracker</h2>
-  <div id="userLabel"></div>
+  <div id="userInfo"></div>
 
   <input id="goalInput" placeholder="New Goal" />
   <button onclick="addGoal()">Add Goal</button>
@@ -67,93 +72,127 @@
 </div>
 
 <script>
-/* ================== CONFIG ================== */
+/* ================= SUPABASE ================= */
 const supabase = supabase.createClient(
   "https://dwfocuhsoarphmduekxn.supabase.co",
   "sb_publishable_353RC6ZYh5JQDqxpf8Htpg_Av-_q6s7"
-)
+);
 
-/* ================== AUTH ================== */
+/* ================= AUTH ================= */
 async function login() {
-  const username = document.getElementById("username").value.trim()
-  const password = document.getElementById("password").value.trim()
-  if (!username || !password) return alert("Fill all fields")
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  if (!username || !password) {
+    alert("Fill username & password");
+    return;
+  }
 
-  const email = username + "@app.local"
+  const email = username + "@app.local";
 
   let { error } = await supabase.auth.signInWithPassword({
-    email, password
-  })
+    email,
+    password
+  });
 
   if (error) {
-    const { error: signupError } = await supabase.auth.signUp({
-      email, password
-    })
-    if (signupError) return alert(signupError.message)
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password
+    });
+    if (signUpError) {
+      alert(signUpError.message);
+      return;
+    }
   }
 }
 
-async function logout() {
-  await supabase.auth.signOut()
-  location.reload()
+/* ================= SESSION HANDLING ================= */
+async function showApp() {
+  document.getElementById("authBox").style.display = "none";
+  document.getElementById("appBox").style.display = "block";
+  loadGoals();
 }
 
-/* ================== GOALS ================== */
+function showAuth() {
+  document.getElementById("authBox").style.display = "block";
+  document.getElementById("appBox").style.display = "none";
+}
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) showApp();
+  else showAuth();
+});
+
+(async () => {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) showApp();
+})();
+
+/* ================= GOALS ================= */
 async function loadGoals() {
-  const user = (await supabase.auth.getUser()).data.user
-  if (!user) return
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return;
 
-  document.getElementById("userLabel").innerText =
-    "Logged in as: " + user.email.split("@")[0]
+  document.getElementById("userInfo").innerText =
+    "Logged in as: " + user.email.split("@")[0];
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_goals")
     .select("*")
-    .order("id")
+    .order("id");
 
-  const box = document.getElementById("goals")
-  box.innerHTML = ""
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const box = document.getElementById("goals");
+  box.innerHTML = "";
 
   data.forEach(g => {
-    const div = document.createElement("div")
-    div.className = "goal"
+    const div = document.createElement("div");
+    div.className = "goal";
     div.innerHTML = `
       <span>${g.name}</span>
       <button onclick="deleteGoal(${g.id})">❌</button>
-    `
-    box.appendChild(div)
-  })
+    `;
+    box.appendChild(div);
+  });
 }
 
 async function addGoal() {
-  const name = document.getElementById("goalInput").value.trim()
-  if (!name) return
+  const name = document.getElementById("goalInput").value.trim();
+  if (!name) return;
 
-  const user = (await supabase.auth.getUser()).data.user
+  const user = (await supabase.auth.getUser()).data.user;
 
-  await supabase.from("user_goals").insert({
-    name,
-    user_id: user.id
-  })
+  const { error } = await supabase
+    .from("user_goals")
+    .insert({
+      name,
+      user_id: user.id
+    });
 
-  document.getElementById("goalInput").value = ""
-  loadGoals()
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  document.getElementById("goalInput").value = "";
+  loadGoals();
 }
 
 async function deleteGoal(id) {
-  await supabase.from("user_goals").delete().eq("id", id)
-  loadGoals()
+  await supabase.from("user_goals").delete().eq("id", id);
+  loadGoals();
 }
 
-/* ================== SESSION ================== */
-supabase.auth.onAuthStateChange((_, session) => {
-  if (session) {
-    document.getElementById("authBox").style.display = "none"
-    document.getElementById("appBox").style.display = "block"
-    loadGoals()
-  }
-})
-
+/* ================= LOGOUT ================= */
+async function logout() {
+  await supabase.auth.signOut();
+  showAuth();
+}
 </script>
+
 </body>
 </html>
