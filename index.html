@@ -6,27 +6,122 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    :root {
+      --bg: #0b0b0b;
+      --panel: #141414;
+      --border: #242424;
+      --text: #eaeaea;
+      --muted: #8a8a8a;
+      --accent: #22c55e;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
     body {
       margin: 0;
-      background: #0b0b0b;
-      color: #eaeaea;
-      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
     .container {
-      max-width: 100%;
-      padding: 20px;
+      max-width: 1400px;
+      margin: auto;
+      padding: 24px;
       overflow-x: auto;
     }
 
-    h1 {
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    header h1 {
       font-size: 20px;
+      margin: 0;
+    }
+
+    .brand {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .note-view {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    .note-text {
+      white-space: pre-wrap;
+      font-size: 14px;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .note-editor {
+      display: none;
+      margin-bottom: 16px;
+    }
+
+    .note-editor textarea {
+      width: 100%;
+      height: 90px;
+      resize: none;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .goal-controls {
+      display: flex;
+      gap: 8px;
       margin-bottom: 16px;
     }
 
     .calendar {
       display: grid;
-      grid-template-columns: 120px repeat(30, minmax(22px, 1fr));
+      grid-template-columns: 240px repeat(31, minmax(22px, 1fr));
       gap: 6px;
       overflow-x: auto;
     }
@@ -34,68 +129,126 @@
     .day-label {
       text-align: center;
       font-size: 12px;
-      color: #888;
+      color: var(--muted);
     }
 
     .goal-name {
       display: flex;
       align-items: center;
+      gap: 8px;
       font-size: 14px;
     }
 
+    .goal-name.editable {
+      cursor: pointer;
+      color: var(--accent);
+    }
+
+    .goal-name input {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+
+    .delete-btn {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
     .cell {
-      height: 26px;
-      background: #141414;
-      border: 1px solid #242424;
+      height: 30px;
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 6px;
       cursor: pointer;
     }
 
     .cell.completed {
-      background: #22c55e;
-      border-color: #22c55e;
+      background: var(--accent);
+      border-color: var(--accent);
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Goal Tracker</h1>
+  <header>
+    <h1>Goal Tracker</h1>
+    <div class="brand">Made by sorabxbt</div>
+  </header>
+
+  <div class="note-view" id="noteView">
+    <div class="note-text" id="noteText">No note added yet.</div>
+    <button id="editNoteBtn">Edit Note</button>
+  </div>
+
+  <div class="note-editor" id="noteEditor">
+    <textarea id="noteInput"></textarea>
+    <div class="note-actions">
+      <button id="saveNote">Save</button>
+      <button id="cancelNote">Cancel</button>
+    </div>
+  </div>
+
+  <div class="goal-controls">
+    <button id="addGoal">+ Add Goal</button>
+    <button id="toggleEdit">✏️ Edit Goals</button>
+  </div>
+
   <div class="calendar" id="calendar"></div>
 </div>
 
-<!-- SUPABASE -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
 <script>
-  /* 🔑 SUPABASE CONFIG */
-  const supabaseUrl = "https://dwfocuhsoarphmduekxn.supabase.co";
-  const supabaseKey = "sb_publishable_353RC6ZYh5JQDqxpf8Htpg_Av-_q6s7";
-
-  // IMPORTANT: client ka naam alag rakha hai
+  /* 🔑 SUPABASE */
   const supabaseClient = supabase.createClient(
-    supabaseUrl,
-    supabaseKey
+    "https://dwfocuhsoarphmduekxn.supabase.co",
+    "sb_publishable_353RC6ZYh5JQDqxpf8Htpg_Av-_q6s7"
   );
 
-  /* 📅 DATE INFO */
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
-  const daysInMonth = 30;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  /* 🎯 GOALS */
-  const goals = ["Reading", "Fitness"];
+  const goalsKey = `goals-${year}-${month}`;
+  const noteKey = `note-${year}-${month}`;
+
+  let goals = JSON.parse(localStorage.getItem(goalsKey)) || ["Reading", "Fitness"];
+  let editMode = false;
+
   const calendar = document.getElementById("calendar");
 
-  /* 🎨 RENDER CALENDAR */
+  function saveGoals() {
+    localStorage.setItem(goalsKey, JSON.stringify(goals));
+  }
+
+  async function loadCompletedGoals() {
+    const { data } = await supabaseClient
+      .from("goal_logs")
+      .select("*")
+      .eq("month", month)
+      .eq("year", year);
+
+    if (!data) return;
+    const cells = document.querySelectorAll(".cell");
+
+    data.forEach(row => {
+      if (!row.completed) return;
+      const gIndex = goals.indexOf(row.goal_name);
+      if (gIndex === -1) return;
+      const index = gIndex * daysInMonth + (row.day - 1);
+      if (cells[index]) cells[index].classList.add("completed");
+    });
+  }
+
   function render() {
     calendar.innerHTML = "";
-
-    // empty corner cell
     calendar.appendChild(document.createElement("div"));
 
-    // day labels
     for (let d = 1; d <= daysInMonth; d++) {
       const lbl = document.createElement("div");
       lbl.className = "day-label";
@@ -103,9 +256,9 @@
       calendar.appendChild(lbl);
     }
 
-    goals.forEach(goal => {
+    goals.forEach((goal, index) => {
       const name = document.createElement("div");
-      name.className = "goal-name";
+      name.className = "goal-name" + (editMode ? " editable" : "");
       name.textContent = goal;
       calendar.appendChild(name);
 
@@ -114,50 +267,38 @@
         cell.className = "cell";
 
         cell.onclick = async () => {
-          const completed = !cell.classList.contains("completed");
+          const done = !cell.classList.contains("completed");
           cell.classList.toggle("completed");
 
           await supabaseClient.from("goal_logs").upsert({
             goal_name: goal,
             day: d,
-            month: month,
-            year: year,
-            completed: completed
+            month,
+            year,
+            completed: done
           });
         };
 
         calendar.appendChild(cell);
       }
     });
+
+    loadCompletedGoals();
   }
 
-  /* 🔄 LOAD SAVED DATA */
-  async function loadCompleted() {
-    const { data, error } = await supabaseClient
-      .from("goal_logs")
-      .select("*")
-      .eq("month", month)
-      .eq("year", year);
+  document.getElementById("addGoal").onclick = () => {
+    goals.push("New Goal");
+    saveGoals();
+    render();
+  };
 
-    if (error || !data) return;
-
-    const cells = document.querySelectorAll(".cell");
-
-    data.forEach(row => {
-      if (!row.completed) return;
-
-      const gIndex = goals.indexOf(row.goal_name);
-      if (gIndex === -1) return;
-
-      const index = gIndex * daysInMonth + (row.day - 1);
-      if (cells[index]) {
-        cells[index].classList.add("completed");
-      }
-    });
-  }
+  document.getElementById("toggleEdit").onclick = e => {
+    editMode = !editMode;
+    e.target.classList.toggle("active", editMode);
+    render();
+  };
 
   render();
-  loadCompleted();
 </script>
 
 </body>
