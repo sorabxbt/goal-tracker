@@ -6,280 +6,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    :root {
-      --bg: #0b0b0b;
-      --panel: #141414;
-      --border: #242424;
-      --text: #eaeaea;
-      --muted: #8a8a8a;
-      --accent: #22c55e;
-      --danger: #ef4444;
-    }
-
-    * {
-      box-sizing: border-box;
-      font-family: Inter, system-ui, sans-serif;
-    }
-
     body {
       margin: 0;
-      background: var(--bg);
-      color: var(--text);
+      background: #0b0b0b;
+      color: #eaeaea;
+      font-family: system-ui, sans-serif;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 900px;
       margin: auto;
-      padding: 24px;
+      padding: 20px;
     }
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    header h1 {
+    h1 {
       font-size: 20px;
-      margin: 0;
-    }
-
-    .brand {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    button {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    button:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    button.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #000;
-    }
-
-    /* NOTE VIEW */
-    .note-view {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 12px;
-      align-items: flex-start;
-    }
-
-    .note-text {
-      white-space: pre-wrap;
-      line-height: 1.5;
-      font-size: 14px;
-      color: var(--muted);
-      flex: 1;
-    }
-
-    /* NOTE EDITOR */
-    .note-editor {
-      display: none;
       margin-bottom: 16px;
     }
 
-    .note-editor textarea {
-      width: 100%;
-      height: 90px;
-      resize: none;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
-      overflow-y: auto;
-    }
-
-    .note-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    /* GOAL CONTROLS */
-    .goal-controls {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    /* CALENDAR */
     .calendar {
       display: grid;
-      grid-template-columns: 240px repeat(31, 1fr);
+      grid-template-columns: 200px repeat(30, 1fr);
       gap: 6px;
     }
 
     .day-label {
       text-align: center;
       font-size: 12px;
-      color: var(--muted);
+      color: #888;
     }
 
     .goal-name {
       display: flex;
       align-items: center;
-      gap: 8px;
       font-size: 14px;
     }
 
-    .goal-name.editable {
-      cursor: pointer;
-      color: var(--accent);
-    }
-
-    .goal-name input {
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 4px 6px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-
-    .delete-btn {
-      border-color: var(--danger);
-      color: var(--danger);
-    }
-
-    .delete-btn:hover {
-      background: var(--danger);
-      color: #000;
-    }
-
     .cell {
-      height: 30px;
-      background: var(--panel);
-      border: 1px solid var(--border);
+      height: 26px;
+      background: #141414;
+      border: 1px solid #242424;
       border-radius: 6px;
       cursor: pointer;
     }
 
     .cell.completed {
-      background: var(--accent);
-      border-color: var(--accent);
+      background: #22c55e;
+      border-color: #22c55e;
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <header>
-    <h1>Goal Tracker</h1>
-    <div class="brand">Made by sorabxbt</div>
-  </header>
-
-  <!-- NOTE VIEW -->
-  <div class="note-view" id="noteView">
-    <div class="note-text" id="noteText">No note added yet.</div>
-    <button id="editNoteBtn">Edit Note</button>
-  </div>
-
-  <!-- NOTE EDITOR -->
-  <div class="note-editor" id="noteEditor">
-    <textarea id="noteInput" placeholder="Write your note..."></textarea>
-    <div class="note-actions">
-      <button id="saveNote">Save</button>
-      <button id="cancelNote">Cancel</button>
-    </div>
-  </div>
-
-  <!-- GOAL CONTROLS -->
-  <div class="goal-controls">
-    <button id="addGoal">+ Add Goal</button>
-    <button id="toggleEdit">✏️ Edit Goals</button>
-  </div>
-
+  <h1>Goal Tracker</h1>
   <div class="calendar" id="calendar"></div>
 </div>
 
+<!-- SUPABASE -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
 <script>
+  /* 🔑 SUPABASE CONFIG (already filled) */
+  const supabaseUrl = "https://dwfocuhsoarphmduekxn.supabase.co";
+  const supabaseKey = "sb_publishable_353RC6ZYh5JQDqxpf8Htpg_Av-_q6s7";
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  /* 📅 DATE INFO */
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = 30;
 
-  const goalsKey = `goals-${year}-${month}`;
-  const noteKey = `note-${year}-${month}`;
-
-  let goals = JSON.parse(localStorage.getItem(goalsKey)) || ["Reading", "Fitness"];
-  let editMode = false;
-
+  /* 🎯 GOALS */
+  const goals = ["Reading", "Fitness"];
   const calendar = document.getElementById("calendar");
-  const toggleEditBtn = document.getElementById("toggleEdit");
-  const editNoteBtn = document.getElementById("editNoteBtn");
 
-  /* NOTE LOGIC */
-  const noteText = document.getElementById("noteText");
-  const noteInput = document.getElementById("noteInput");
-  const noteView = document.getElementById("noteView");
-  const noteEditor = document.getElementById("noteEditor");
-
-  const savedNote = localStorage.getItem(noteKey);
-  if (savedNote) noteText.textContent = savedNote;
-
-  editNoteBtn.onclick = () => {
-    editNoteBtn.classList.add("active");
-    noteInput.value = noteText.textContent === "No note added yet." ? "" : noteText.textContent;
-    noteView.style.display = "none";
-    noteEditor.style.display = "block";
-    noteInput.focus();
-  };
-
-  document.getElementById("saveNote").onclick = () => {
-    const val = noteInput.value.trim() || "No note added yet.";
-    localStorage.setItem(noteKey, val);
-    noteText.textContent = val;
-    noteEditor.style.display = "none";
-    noteView.style.display = "flex";
-    editNoteBtn.classList.remove("active");
-  };
-
-  document.getElementById("cancelNote").onclick = () => {
-    noteEditor.style.display = "none";
-    noteView.style.display = "flex";
-    editNoteBtn.classList.remove("active");
-  };
-
-  noteInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      document.getElementById("saveNote").click();
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      document.getElementById("cancelNote").click();
-    }
-  });
-
-  /* GOALS */
-  function saveGoals() {
-    localStorage.setItem(goalsKey, JSON.stringify(goals));
-  }
-
+  /* 🎨 RENDER UI */
   function render() {
     calendar.innerHTML = "";
     calendar.appendChild(document.createElement("div"));
@@ -291,70 +94,61 @@
       calendar.appendChild(lbl);
     }
 
-    goals.forEach((goal, index) => {
+    goals.forEach(goal => {
       const name = document.createElement("div");
-      name.className = "goal-name" + (editMode ? " editable" : "");
-
-      const label = document.createElement("span");
-      label.textContent = goal;
-
-      if (editMode) {
-        label.onclick = () => {
-          const input = document.createElement("input");
-          input.value = goal;
-          name.innerHTML = "";
-          name.appendChild(input);
-          input.focus();
-
-          input.onblur = () => {
-            goals[index] = input.value.trim() || "Untitled Goal";
-            saveGoals();
-            render();
-          };
-        };
-      }
-
-      name.appendChild(label);
-
-      if (editMode) {
-        const del = document.createElement("button");
-        del.textContent = "🗑";
-        del.className = "delete-btn";
-        del.onclick = () => {
-          if (confirm(`Delete "${goal}" ?`)) {
-            goals.splice(index, 1);
-            saveGoals();
-            render();
-          }
-        };
-        name.appendChild(del);
-      }
-
+      name.className = "goal-name";
+      name.textContent = goal;
       calendar.appendChild(name);
 
       for (let d = 1; d <= daysInMonth; d++) {
         const cell = document.createElement("div");
         cell.className = "cell";
-        cell.onclick = () => cell.classList.toggle("completed");
+
+        cell.onclick = async () => {
+          const done = !cell.classList.contains("completed");
+          cell.classList.toggle("completed");
+
+          await supabase.from("goal_logs").upsert({
+            goal_name: goal,
+            day: d,
+            month: month,
+            year: year,
+            completed: done
+          });
+        };
+
         calendar.appendChild(cell);
       }
     });
   }
 
-  document.getElementById("addGoal").onclick = () => {
-    goals.push("New Goal");
-    saveGoals();
-    render();
-  };
+  /* 🔄 LOAD SAVED DATA */
+  async function loadCompleted() {
+    const { data } = await supabase
+      .from("goal_logs")
+      .select("*")
+      .eq("month", month)
+      .eq("year", year);
 
-  toggleEditBtn.onclick = () => {
-    editMode = !editMode;
-    toggleEditBtn.classList.toggle("active", editMode);
-    toggleEditBtn.textContent = editMode ? "✔ Done Editing" : "✏️ Edit Goals";
-    render();
-  };
+    if (!data) return;
+
+    const cells = document.querySelectorAll(".cell");
+
+    data.forEach(row => {
+      if (!row.completed) return;
+
+      const gIndex = goals.indexOf(row.goal_name);
+      if (gIndex === -1) return;
+
+      const index = gIndex * daysInMonth + (row.day - 1);
+      if (cells[index]) {
+        cells[index].classList.add("completed");
+      }
+    });
+  }
 
   render();
+  loadCompleted();
 </script>
 
 </body>
