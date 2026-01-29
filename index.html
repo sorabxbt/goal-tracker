@@ -1,267 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Goal Tracker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>Goal Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <style>
-    :root {
-      --bg:#0b0b0b; --panel:#141414; --border:#242424;
-      --text:#eaeaea; --muted:#8a8a8a;
-      --accent:#22c55e; --danger:#ef4444;
-    }
-    *{box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
-    body{margin:0;background:var(--bg);color:var(--text)}
-    .container{max-width:1400px;margin:auto;padding:24px;overflow-x:auto}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-    header h1{font-size:20px;margin:0}
-    .brand{font-size:13px;color:var(--muted)}
-    button{background:none;border:1px solid var(--border);color:var(--text);
-      padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px}
-    button:hover{border-color:var(--accent);color:var(--accent)}
-    button.active{background:var(--accent);border-color:var(--accent);color:#000}
-
-    .note-view,.note-editor{
-      background:var(--panel);border:1px solid var(--border);
-      border-radius:8px;padding:12px 14px;margin-bottom:12px
-    }
-    .note-text{white-space:pre-wrap;font-size:14px;color:var(--muted)}
-    .note-editor textarea{
-      width:100%;height:120px;resize:vertical;background:var(--panel);
-      border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text)
-    }
-    .note-actions{display:flex;gap:8px;margin-top:8px}
-
-    .goal-controls{display:flex;gap:8px;margin-bottom:16px}
-
-    .calendar{
-      display:grid;grid-template-columns:240px repeat(31, minmax(22px,1fr));
-      gap:6px;overflow-x:auto
-    }
-    .day-label{text-align:center;font-size:12px;color:var(--muted)}
-    .goal-name{display:flex;align-items:center;gap:8px;font-size:14px}
-    .goal-name.editable{cursor:pointer;color:var(--accent)}
-    .goal-name input{
-      width:100%;background:var(--panel);border:1px solid var(--border);
-      color:var(--text);padding:4px 6px;border-radius:4px
-    }
-    .delete-btn{border-color:var(--danger);color:var(--danger)}
-    .cell{height:30px;background:var(--panel);
-      border:1px solid var(--border);border-radius:6px;cursor:pointer}
-    .cell.completed{background:var(--accent);border-color:var(--accent)}
-
-    /* Auth overlay (simple, no UI change elsewhere) */
-    #auth{position:fixed;inset:0;background:#000c;display:flex;
-      align-items:center;justify-content:center}
-    .auth-box{background:var(--panel);border:1px solid var(--border);
-      padding:16px;border-radius:8px;width:260px}
-    .auth-box input{width:100%;margin-bottom:8px;padding:8px;
-      background:#000;border:1px solid var(--border);color:#fff}
-  </style>
+<style>
+:root {
+  --bg:#0b0b0b;--panel:#141414;--border:#242424;
+  --text:#eaeaea;--muted:#8a8a8a;--accent:#22c55e;--danger:#ef4444;
+}
+*{box-sizing:border-box;font-family:Inter,system-ui}
+body{margin:0;background:var(--bg);color:var(--text)}
+.container{max-width:1400px;margin:auto;padding:24px}
+header{display:flex;justify-content:space-between;align-items:center}
+button{background:none;border:1px solid var(--border);color:var(--text);
+padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.active{background:var(--accent);color:#000}
+.calendar{display:grid;grid-template-columns:240px repeat(31,1fr);gap:6px;margin-top:10px}
+.day-label{text-align:center;font-size:11px;color:var(--muted)}
+.goal-name{display:flex;align-items:center;gap:6px}
+.goal-name input{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text)}
+.cell{height:28px;border:1px solid var(--border);border-radius:5px;cursor:pointer}
+.cell.completed{background:var(--accent)}
+#auth{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center}
+.auth-box{background:var(--panel);padding:20px;border-radius:10px;width:280px}
+.auth-box input{width:100%;margin-bottom:10px;padding:8px;background:#000;border:1px solid var(--border);color:#fff}
+.user{cursor:pointer}
+.dropdown{display:none;position:absolute;background:var(--panel);border:1px solid var(--border);right:0}
+.dropdown button{width:100%}
+</style>
 </head>
+
 <body>
 
-<!-- AUTH -->
 <div id="auth">
   <div class="auth-box">
-    <h3>Login</h3>
+    <h3>Login / Signup</h3>
     <input id="username" placeholder="Username">
     <input id="password" type="password" placeholder="Password">
-    <button id="loginBtn">Continue</button>
+    <button onclick="login()">Continue</button>
   </div>
 </div>
 
 <div class="container" id="app" style="display:none">
-  <header>
-    <h1>Goal Tracker</h1>
-    <div class="brand" id="userLabel">Made by sorabxbt</div>
-  </header>
-
-  <div class="note-view" id="noteView">
-    <div class="note-text" id="noteText">No note added yet.</div>
-    <button id="editNoteBtn">Edit Note</button>
-  </div>
-
-  <div class="note-editor" id="noteEditor" style="display:none">
-    <textarea id="noteInput"></textarea>
-    <div class="note-actions">
-      <button id="saveNote">Save</button>
-      <button id="cancelNote">Cancel</button>
+<header>
+  <h2>Goal Tracker</h2>
+  <div style="position:relative">
+    <span class="user" onclick="toggleMenu()" id="userName"></span>
+    <div class="dropdown" id="menu">
+      <button onclick="logout()">Logout</button>
     </div>
   </div>
+</header>
 
-  <div class="goal-controls">
-    <button id="addGoal">+ Add Goal</button>
-    <button id="toggleEdit">✏️ Edit Goals</button>
-    <button id="logoutBtn">Logout</button>
-  </div>
+<br>
+<button onclick="addGoal()">+ Add Goal</button>
+<button onclick="editModeToggle()" id="editBtn">✏️ Edit Goals</button>
 
-  <div class="calendar" id="calendar"></div>
+<div class="calendar" id="calendar"></div>
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-/* ===== SUPABASE ===== */
 const supabaseClient = supabase.createClient(
   "https://dwfocuhsoarphmduekxn.supabase.co",
   "sb_publishable_353RC6ZYh5JQDqxpf8Htpg_Av-_q6s7"
 );
 
-/* ===== AUTH (username -> fake email) ===== */
-loginBtn.onclick = async () => {
-  const u = username.value.trim();
-  const p = password.value.trim();
-  if(!u||!p) return alert("Fill both");
-  const email = u + "@app.local";
-  let { error } = await supabaseClient.auth.signInWithPassword({ email, password:p });
-  if (error) {
-    const r = await supabaseClient.auth.signUp({ email, password:p });
-    if (r.error) return alert(r.error.message);
-  }
-};
+let user, editMode=false;
+const today=new Date(),year=today.getFullYear(),month=today.getMonth()+1;
+const calendar=document.getElementById("calendar");
 
-logoutBtn.onclick = async () => {
-  await supabaseClient.auth.signOut();
-  location.reload();
-};
-
-/* Auto session (no logout on refresh) */
-supabaseClient.auth.onAuthStateChange((_, session)=>{
-  if(session){
-    auth.style.display="none";
-    app.style.display="block";
-    userLabel.textContent = "@" + session.user.email.split("@")[0];
-    init();
-  } else {
-    auth.style.display="flex";
-    app.style.display="none";
-  }
+supabaseClient.auth.getSession().then(({data})=>{
+  if(data.session){user=data.session.user;init()}
 });
-(async()=>{
-  const { data } = await supabaseClient.auth.getSession();
-  if(data.session){
-    auth.style.display="none";
-    app.style.display="block";
-    userLabel.textContent = "@" + data.session.user.email.split("@")[0];
-    init();
+
+async function login(){
+  const u=username.value.trim(),p=password.value;
+  const email=`${u}@local.app`;
+  let res=await supabaseClient.auth.signInWithPassword({email,password:p});
+  if(res.error){
+    res=await supabaseClient.auth.signUp({email,password:p});
+    if(res.error) return alert(res.error.message);
   }
-})();
-
-/* ===== DATE ===== */
-const today = new Date();
-const year = today.getFullYear();
-const month = today.getMonth();
-const daysInMonth = new Date(year, month+1, 0).getDate();
-
-/* ===== STATE ===== */
-let editMode=false;
-let goals=[];
-
-/* ===== NOTES (Supabase optional; keeping simple local for now) ===== */
-editNoteBtn.onclick = ()=>{
-  noteInput.value = noteText.textContent==="No note added yet."?"":noteText.textContent;
-  noteView.style.display="none";
-  noteEditor.style.display="block";
-};
-saveNote.onclick = ()=>{
-  noteText.textContent = noteInput.value.trim() || "No note added yet.";
-  noteEditor.style.display="none";
-  noteView.style.display="block";
-};
-cancelNote.onclick = ()=>{
-  noteEditor.style.display="none";
-  noteView.style.display="block";
-};
-
-/* ===== GOALS ===== */
-async function loadGoals(){
-  const { data } = await supabaseClient
-    .from("user_goals")
-    .select("*")
-    .order("position");
-  goals = data || [];
+  user=res.data.user;init();
 }
 
-async function addGoalFn(){
-  const { data:{user} } = await supabaseClient.auth.getUser();
-  await supabaseClient.from("user_goals").insert({
-    user_id:user.id, name:"New Goal", position:Date.now()
-  });
-  await init();
+function init(){
+  auth.style.display="none";
+  app.style.display="block";
+  userName.textContent="@"+user.email.split("@")[0];
+  load();
 }
 
-async function renameGoal(id, name){
-  await supabaseClient.from("user_goals").update({name}).eq("id",id);
-  await init();
-}
-async function deleteGoal(id){
-  await supabaseClient.from("user_goals").delete().eq("id",id);
-  await init();
-}
-
-/* ===== CALENDAR RENDER ===== */
-async function render(){
-  calendar.innerHTML="";
-  calendar.appendChild(document.createElement("div"));
-  for(let d=1; d<=daysInMonth; d++){
+async function load(){
+  calendar.innerHTML="<div></div>";
+  for(let d=1;d<=31;d++){
     const l=document.createElement("div");
-    l.className="day-label"; l.textContent=d;
-    calendar.appendChild(l);
+    l.className="day-label";l.textContent=d;calendar.appendChild(l);
   }
 
-  for(const g of goals){
-    const name=document.createElement("div");
-    name.className="goal-name"+(editMode?" editable":"");
-    const label=document.createElement("span");
-    label.textContent=g.name;
+  const {data:goals}=await supabaseClient
+    .from("user_goals").select("*").eq("user_id",user.id).order("position");
 
+  goals.forEach((g,i)=>{
+    const name=document.createElement("div");
+    name.className="goal-name";
     if(editMode){
-      label.onclick=()=>{
-        const i=document.createElement("input");
-        i.value=g.name;
-        name.innerHTML="";
-        name.appendChild(i);
-        i.focus();
-        i.onblur=()=>renameGoal(g.id, i.value.trim()||g.name);
-      };
+      const inp=document.createElement("input");
+      inp.value=g.name;
+      inp.onchange=()=>updateGoal(g.id,inp.value);
+      name.appendChild(inp);
       const del=document.createElement("button");
-      del.textContent="🗑"; del.className="delete-btn";
-      del.onclick=()=>deleteGoal(g.id);
-      name.appendChild(label); name.appendChild(del);
-    } else {
-      name.appendChild(label);
-    }
+      del.textContent="❌";del.onclick=()=>deleteGoal(g.id);
+      name.appendChild(del);
+    } else name.textContent=g.name;
     calendar.appendChild(name);
 
-    for(let d=1; d<=daysInMonth; d++){
+    for(let d=1;d<=31;d++){
       const c=document.createElement("div");
       c.className="cell";
-      c.onclick=async()=>{
-        c.classList.toggle("completed");
-        const { data:{user} } = await supabaseClient.auth.getUser();
-        await supabaseClient.from("goal_logs").upsert({
-          user_id:user.id, goal_id:g.id, day:d, month, year,
-          completed:c.classList.contains("completed")
-        });
-      };
+      c.onclick=()=>toggle(g.name,d,c);
       calendar.appendChild(c);
     }
-  }
+  });
+
+  const {data:logs}=await supabaseClient
+    .from("goal_logs")
+    .select("*")
+    .eq("user_id",user.id)
+    .eq("month",month).eq("year",year);
+
+  logs.forEach(l=>{
+    const gi=goals.findIndex(g=>g.name===l.goal_name);
+    if(gi>=0){
+      const idx=gi*31+(l.day-1);
+      calendar.querySelectorAll(".cell")[idx]?.classList.add("completed");
+    }
+  });
 }
 
-/* ===== INIT ===== */
-async function init(){
-  await loadGoals();
-  await render();
+async function toggle(goal,day,cell){
+  const done=!cell.classList.contains("completed");
+  cell.classList.toggle("completed");
+  await supabaseClient.from("goal_logs").upsert({
+    user_id:user.id,goal_name:goal,day,month,year,completed:done
+  });
 }
 
-addGoal.onclick = addGoalFn;
-toggleEdit.onclick = ()=>{
+async function addGoal(){
+  const name=prompt("Goal name?");
+  if(!name) return;
+  await supabaseClient.from("user_goals").insert({
+    user_id:user.id,name,position:Date.now()
+  });
+  load();
+}
+
+async function updateGoal(id,name){
+  await supabaseClient.from("user_goals").update({name}).eq("id",id);
+}
+
+async function deleteGoal(id){
+  await supabaseClient.from("user_goals").delete().eq("id",id);
+  load();
+}
+
+function editModeToggle(){
   editMode=!editMode;
-  toggleEdit.classList.toggle("active", editMode);
-  render();
-};
+  editBtn.classList.toggle("active",editMode);
+  load();
+}
+
+function toggleMenu(){menu.style.display=menu.style.display==="block"?"none":"block"}
+
+async function logout(){
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
 </script>
 </body>
 </html>
