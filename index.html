@@ -8,7 +8,7 @@
 <style>
 :root{
 --bg:#0b0b0b;--panel:#141414;--border:#242424;
---text:#eaeaea;--muted:#8a8a8a;--accent:#22c55e;
+--text:#eaeaea;--muted:#8a8a8a;--accent:#22c55e;--danger:#ef4444;
 }
 *{box-sizing:border-box;font-family:system-ui}
 body{margin:0;background:var(--bg);color:var(--text)}
@@ -18,23 +18,53 @@ header{display:flex;justify-content:space-between;align-items:center;margin-bott
 
 button{
 background:none;border:1px solid var(--border);color:var(--text);
-padding:6px 12px;border-radius:6px;cursor:pointer
+padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px
 }
 button.active{background:var(--accent);color:#000}
+button.delete-btn{
+border-color:var(--danger);color:var(--danger)
+}
+button.delete-btn:hover{
+background:var(--danger);color:#000
+}
 
+/* NOTES */
 .note-view,.note-editor{
 background:var(--panel);border:1px solid var(--border);
 border-radius:8px;padding:12px;margin-bottom:12px
 }
 .note-editor{display:none}
+.note-editor textarea{
+width:100%;
+min-height:120px;
+resize:vertical;
+background:#000;
+border:1px solid var(--border);
+border-radius:6px;
+color:var(--text);
+padding:10px;
+line-height:1.5;
+font-size:14px;
+}
 
+/* CALENDAR */
 .calendar{
 display:grid;
 grid-template-columns:240px repeat(31,minmax(22px,1fr));
 gap:6px;overflow-x:auto
 }
 .day-label{text-align:center;font-size:12px;color:var(--muted)}
-.goal-name{display:flex;align-items:center;gap:8px}
+
+.goal-name{
+display:flex;align-items:center;gap:8px;font-size:14px
+}
+.goal-name.editable{cursor:pointer;color:var(--accent)}
+.goal-name input{
+width:100%;
+background:#000;border:1px solid var(--border);
+color:var(--text);padding:4px 6px;border-radius:4px
+}
+
 .cell{
 height:30px;background:var(--panel);
 border:1px solid var(--border);border-radius:6px;cursor:pointer
@@ -105,7 +135,7 @@ border-radius:8px;padding:8px;min-width:120px
 </div>
 
 <div class="note-editor" id="noteEditor">
-  <textarea id="noteInput"></textarea>
+  <textarea id="noteInput" placeholder="Write your note here..."></textarea>
   <button id="saveNote">Save</button>
 </div>
 
@@ -132,7 +162,7 @@ const calendar=document.getElementById("calendar");
 
 function toEmail(u){return u.toLowerCase()+"@goaltracker.local"}
 
-/* AUTO LOGIN ON REFRESH */
+/* AUTO LOGIN */
 (async()=>{
 const {data}=await supabaseClient.auth.getSession();
 if(data.session){
@@ -174,7 +204,6 @@ function initUserUI(){
 const uname=currentUser.email.split("@")[0];
 avatar.textContent=uname[0].toUpperCase();
 usernameLabel.textContent=uname;
-
 userMenu.onclick=()=>{
 dropdown.style.display=
 dropdown.style.display==="block"?"none":"block";
@@ -195,6 +224,7 @@ const daysInMonth=new Date(year,month+1,0).getDate();
 let goals=["Reading","Fitness"];
 let editMode=false;
 
+/* LOAD COMPLETED */
 async function loadCompleted(){
 const {data}=await supabaseClient.from("goal_logs")
 .select("*").eq("user_id",currentUser.id)
@@ -209,6 +239,7 @@ cells[gi*daysInMonth+(r.day-1)]?.classList.add("completed");
 });
 }
 
+/* RENDER (FIXED EDIT MODE) */
 function render(){
 calendar.innerHTML="";
 calendar.appendChild(document.createElement("div"));
@@ -219,9 +250,42 @@ l.className="day-label";l.textContent=d;
 calendar.appendChild(l);
 }
 
-goals.forEach(goal=>{
+goals.forEach((goal,index)=>{
 const g=document.createElement("div");
-g.className="goal-name";g.textContent=goal;
+g.className="goal-name"+(editMode?" editable":"");
+
+const label=document.createElement("span");
+label.textContent=goal;
+
+if(editMode){
+label.onclick=()=>{
+const input=document.createElement("input");
+input.value=goal;
+g.innerHTML="";
+g.appendChild(input);
+input.focus();
+input.onblur=()=>{
+goals[index]=input.value.trim()||"Untitled Goal";
+render();
+};
+};
+}
+
+g.appendChild(label);
+
+if(editMode){
+const del=document.createElement("button");
+del.textContent="🗑";
+del.className="delete-btn";
+del.onclick=()=>{
+if(confirm(`Delete "${goal}" ?`)){
+goals.splice(index,1);
+render();
+}
+};
+g.appendChild(del);
+}
+
 calendar.appendChild(g);
 
 for(let d=1;d<=daysInMonth;d++){
@@ -241,11 +305,12 @@ calendar.appendChild(c);
 loadCompleted();
 }
 
-/* EDIT GOALS */
+/* EDIT GOALS BUTTON */
 toggleEdit.onclick=()=>{
 editMode=!editMode;
 toggleEdit.classList.toggle("active",editMode);
 toggleEdit.textContent=editMode?"✔ Done Editing":"✏️ Edit Goals";
+render();
 };
 
 /* NOTES */
@@ -254,7 +319,6 @@ noteInput.value=noteText.textContent==="No note added yet."?"":noteText.textCont
 noteView.style.display="none";
 noteEditor.style.display="block";
 };
-
 saveNote.onclick=()=>{
 noteText.textContent=noteInput.value||"No note added yet.";
 noteEditor.style.display="none";
