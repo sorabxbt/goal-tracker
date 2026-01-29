@@ -135,7 +135,7 @@ border-radius:8px;padding:8px;min-width:120px
 </div>
 
 <div class="note-editor" id="noteEditor">
-  <textarea id="noteInput" placeholder="Write your note here..."></textarea>
+  <textarea id="noteInput"></textarea>
   <button id="saveNote">Save</button>
 </div>
 
@@ -156,6 +156,9 @@ const supabaseClient=supabase.createClient(
 );
 
 let currentUser=null;
+let goals=[];
+let editMode=false;
+
 const app=document.getElementById("app");
 const authOverlay=document.getElementById("authOverlay");
 const calendar=document.getElementById("calendar");
@@ -196,7 +199,7 @@ function startApp(){
 authOverlay.style.display="none";
 app.style.display="block";
 initUserUI();
-render();
+loadGoals();
 }
 
 /* USER MENU */
@@ -204,10 +207,8 @@ function initUserUI(){
 const uname=currentUser.email.split("@")[0];
 avatar.textContent=uname[0].toUpperCase();
 usernameLabel.textContent=uname;
-userMenu.onclick=()=>{
-dropdown.style.display=
+userMenu.onclick=()=>dropdown.style.display=
 dropdown.style.display==="block"?"none":"block";
-};
 }
 
 logoutBtn.onclick=async()=>{
@@ -215,19 +216,29 @@ await supabaseClient.auth.signOut();
 location.reload();
 };
 
-/* APP LOGIC */
+/* LOAD GOALS FROM DB */
+async function loadGoals(){
+const {data}=await supabaseClient
+.from("user_goals")
+.select("*")
+.eq("user_id",currentUser.id)
+.order("position",{ascending:true});
+
+goals=data?data.map(g=>g.name):[];
+render();
+}
+
+/* CALENDAR */
 const today=new Date();
 const year=today.getFullYear();
 const month=today.getMonth();
 const daysInMonth=new Date(year,month+1,0).getDate();
 
-let goals=["Reading","Fitness"];
-let editMode=false;
-
 /* LOAD COMPLETED */
 async function loadCompleted(){
 const {data}=await supabaseClient.from("goal_logs")
-.select("*").eq("user_id",currentUser.id)
+.select("*")
+.eq("user_id",currentUser.id)
 .eq("month",month).eq("year",year);
 
 if(!data)return;
@@ -239,7 +250,7 @@ cells[gi*daysInMonth+(r.day-1)]?.classList.add("completed");
 });
 }
 
-/* RENDER (FIXED EDIT MODE) */
+/* RENDER */
 function render(){
 calendar.innerHTML="";
 calendar.appendChild(document.createElement("div"));
@@ -257,31 +268,19 @@ g.className="goal-name"+(editMode?" editable":"");
 const label=document.createElement("span");
 label.textContent=goal;
 
-if(editMode){
-label.onclick=()=>{
-const input=document.createElement("input");
-input.value=goal;
-g.innerHTML="";
-g.appendChild(input);
-input.focus();
-input.onblur=()=>{
-goals[index]=input.value.trim()||"Untitled Goal";
-render();
-};
-};
-}
-
 g.appendChild(label);
 
 if(editMode){
 const del=document.createElement("button");
 del.textContent="🗑";
 del.className="delete-btn";
-del.onclick=()=>{
-if(confirm(`Delete "${goal}" ?`)){
-goals.splice(index,1);
-render();
-}
+del.onclick=async()=>{
+if(!confirm(`Delete "${goal}" ?`))return;
+await supabaseClient.from("user_goals")
+.delete()
+.eq("user_id",currentUser.id)
+.eq("name",goal);
+loadGoals();
 };
 g.appendChild(del);
 }
@@ -305,7 +304,21 @@ calendar.appendChild(c);
 loadCompleted();
 }
 
-/* EDIT GOALS BUTTON */
+/* ADD GOAL (DB SAVE) */
+addGoal.onclick=async()=>{
+const name=prompt("Goal name?");
+if(!name)return;
+
+await supabaseClient.from("user_goals").insert({
+user_id:currentUser.id,
+name:name,
+position:Date.now()
+});
+
+loadGoals();
+};
+
+/* EDIT MODE */
 toggleEdit.onclick=()=>{
 editMode=!editMode;
 toggleEdit.classList.toggle("active",editMode);
@@ -322,14 +335,8 @@ noteEditor.style.display="block";
 saveNote.onclick=()=>{
 noteText.textContent=noteInput.value||"No note added yet.";
 noteEditor.style.display="none";
-noteView.style.display="flex";
-};
-
-addGoal.onclick=()=>{
-goals.push("New Goal");
-render();
+noteView.style.display="block";
 };
 </script>
-
 </body>
 </html>
